@@ -1,0 +1,1114 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import numpy as np\n",
+    "import pandas as pd\n",
+    "import os\n",
+    "\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "/Users/marcvendramet/opt/anaconda3/envs/BAPython38/lib/python3.8/site-packages/IPython/core/interactiveshell.py:3444: DtypeWarning: Columns (0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,20,21) have mixed types.Specify dtype option on import or set low_memory=False.\n",
+      "  exec(code_obj, self.user_global_ns, self.user_ns)\n"
+     ]
+    }
+   ],
+   "source": [
+    "###################\n",
+    "### Import Data ###\n",
+    "###################\n",
+    "\n",
+    "dirname = os.path.abspath(os.getcwd())\n",
+    "acquisition = pd.read_csv(f\"{dirname}/data/acquisitions.csv\")\n",
+    "investments = pd.read_csv(f\"{dirname}/data/investments.csv\")\n",
+    "organisations = pd.read_csv(f\"{dirname}/data/organisations.csv\")\n",
+    "rounds = pd.read_csv(f\"{dirname}/data/rounds.csv\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Handling outliers\n",
+    "Applying the 1.5IQR Method\n",
+    "Reasoning: https://towardsdatascience.com/why-1-5-in-iqr-method-of-outlier-detection-5d07fdc82097\n",
+    "\n",
+    "Code Example: https://www.kaggle.com/code/tanetboss/explanation-of-startup-investment\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Creating boundaries for 1.5IQR method\n",
+    "Q1 = data['funding_total_usd'].quantile(0.25)\n",
+    "Q3 = data['funding_total_usd'].quantile(0.75)\n",
+    "IQR = Q3 - Q1\n",
+    "\n",
+    "lower_bound = (Q1 - 1.5 * IQR)\n",
+    "upper_bound = (Q3 + 1.5 * IQR)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Removing outliers\n",
+    "without_outlier = data[(data['funding_total_usd'] > lower_bound ) & (data['funding_total_usd'] < upper_bound)]"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Investors list preparation"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Create a variable containing a list of the names of all investors per investment\n",
+    "investments[\"investor_name\"] = np.where(investments[\"investor_name\"].isna(), \"Unknown\", investments[\"investor_name\"])\n",
+    "investments[\"investor_list\"] = investments.groupby(\"company_permalink\")[\"investor_name\"].transform(lambda x: \"-\".join(x))\n",
+    "investments[\"investor_list\"] = list(map(list,map(set,investments[\"investor_list\"].str.split(\"-\"))))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "invesList = pd.DataFrame(pd.unique(investments[\"investor_name\"]))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 16,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "invesList.to_csv(\"InvestorsList.csv\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## General exploration"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div><div id=ae1d6bdc-9004-4398-b567-998681063544 style=\"display:none; background-color:#9D6CFF; color:white; width:200px; height:30px; padding-left:5px; border-radius:4px; flex-direction:row; justify-content:space-around; align-items:center;\" onmouseover=\"this.style.backgroundColor='#BA9BF8'\" onmouseout=\"this.style.backgroundColor='#9D6CFF'\" onclick=\"window.commands?.execute('create-mitosheet-from-dataframe-output');\">See Full Dataframe in Mito</div> <script> if (window.commands.hasCommand('create-mitosheet-from-dataframe-output')) document.getElementById('ae1d6bdc-9004-4398-b567-998681063544').style.display = 'flex' </script> <table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>permalink</th>\n",
+       "      <th>name</th>\n",
+       "      <th>homepage_url</th>\n",
+       "      <th>category_list</th>\n",
+       "      <th>market</th>\n",
+       "      <th>funding_total_usd</th>\n",
+       "      <th>status</th>\n",
+       "      <th>country_code</th>\n",
+       "      <th>state_code</th>\n",
+       "      <th>region</th>\n",
+       "      <th>city</th>\n",
+       "      <th>funding_rounds</th>\n",
+       "      <th>founded_at</th>\n",
+       "      <th>first_funding_at</th>\n",
+       "      <th>last_funding_at</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>/organization/waywire</td>\n",
+       "      <td>#waywire</td>\n",
+       "      <td>http://www.waywire.com</td>\n",
+       "      <td>|Entertainment|Politics|Social Media|News|</td>\n",
+       "      <td>News</td>\n",
+       "      <td>1750000.0</td>\n",
+       "      <td>acquired</td>\n",
+       "      <td>USA</td>\n",
+       "      <td>NY</td>\n",
+       "      <td>New York City</td>\n",
+       "      <td>New York</td>\n",
+       "      <td>1</td>\n",
+       "      <td>2012-06-01 00:00:00</td>\n",
+       "      <td>2012-06-30 00:00:00</td>\n",
+       "      <td>2012-06-30 00:00:00</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>/organization/rock-your-paper</td>\n",
+       "      <td>'Rock' Your Paper</td>\n",
+       "      <td>http://www.rockyourpaper.org</td>\n",
+       "      <td>|Publishing|Education|</td>\n",
+       "      <td>Publishing</td>\n",
+       "      <td>40000.0</td>\n",
+       "      <td>operating</td>\n",
+       "      <td>EST</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>Tallinn</td>\n",
+       "      <td>Tallinn</td>\n",
+       "      <td>1</td>\n",
+       "      <td>2012-10-26 00:00:00</td>\n",
+       "      <td>2012-08-09 00:00:00</td>\n",
+       "      <td>2012-08-09 00:00:00</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>/organization/in-touch-network</td>\n",
+       "      <td>(In)Touch Network</td>\n",
+       "      <td>http://www.InTouchNetwork.com</td>\n",
+       "      <td>|Electronics|Guides|Coffee|Restaurants|Music|iPhone|Apps|Mobile|iOS|E-Commerce|</td>\n",
+       "      <td>Electronics</td>\n",
+       "      <td>1500000.0</td>\n",
+       "      <td>operating</td>\n",
+       "      <td>GBR</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>London</td>\n",
+       "      <td>London</td>\n",
+       "      <td>1</td>\n",
+       "      <td>2011-04-01 00:00:00</td>\n",
+       "      <td>2011-04-01 00:00:00</td>\n",
+       "      <td>2011-04-01 00:00:00</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>/organization/r-ranch-and-mine</td>\n",
+       "      <td>-R- Ranch and Mine</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>|Tourism|Entertainment|Games|</td>\n",
+       "      <td>Tourism</td>\n",
+       "      <td>60000.0</td>\n",
+       "      <td>operating</td>\n",
+       "      <td>USA</td>\n",
+       "      <td>TX</td>\n",
+       "      <td>Dallas</td>\n",
+       "      <td>Fort Worth</td>\n",
+       "      <td>2</td>\n",
+       "      <td>2014-01-01 00:00:00</td>\n",
+       "      <td>2014-08-17 00:00:00</td>\n",
+       "      <td>2014-09-26 00:00:00</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>/organization/club-domains</td>\n",
+       "      <td>.Club Domains</td>\n",
+       "      <td>http://nic.club/</td>\n",
+       "      <td>|Software|</td>\n",
+       "      <td>Software</td>\n",
+       "      <td>7000000.0</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>USA</td>\n",
+       "      <td>FL</td>\n",
+       "      <td>Ft. Lauderdale</td>\n",
+       "      <td>Oakland Park</td>\n",
+       "      <td>1</td>\n",
+       "      <td>2011-10-10 00:00:00</td>\n",
+       "      <td>2013-05-31 00:00:00</td>\n",
+       "      <td>2013-05-31 00:00:00</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>5</th>\n",
+       "      <td>/organization/1-2-3-listo</td>\n",
+       "      <td>1,2,3 Listo</td>\n",
+       "      <td>http://www.123listo.com</td>\n",
+       "      <td>|E-Commerce|</td>\n",
+       "      <td>E-Commerce</td>\n",
+       "      <td>40000.0</td>\n",
+       "      <td>operating</td>\n",
+       "      <td>CHL</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>Santiago</td>\n",
+       "      <td>Las Condes</td>\n",
+       "      <td>1</td>\n",
+       "      <td>2012-01-01 00:00:00</td>\n",
+       "      <td>2013-02-18 00:00:00</td>\n",
+       "      <td>2013-02-18 00:00:00</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>6</th>\n",
+       "      <td>/organization/10-minutes-with</td>\n",
+       "      <td>10 Minutes With</td>\n",
+       "      <td>http://10minuteswith.com</td>\n",
+       "      <td>|Education|</td>\n",
+       "      <td>Education</td>\n",
+       "      <td>4400000.0</td>\n",
+       "      <td>operating</td>\n",
+       "      <td>GBR</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>London</td>\n",
+       "      <td>London</td>\n",
+       "      <td>2</td>\n",
+       "      <td>2013-01-01 00:00:00</td>\n",
+       "      <td>2013-01-01 00:00:00</td>\n",
+       "      <td>2014-10-09 00:00:00</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>7</th>\n",
+       "      <td>/organization/10-20-media</td>\n",
+       "      <td>10-20 Media</td>\n",
+       "      <td>http://www.10-20media.com</td>\n",
+       "      <td>|E-Commerce|</td>\n",
+       "      <td>E-Commerce</td>\n",
+       "      <td>2050000.0</td>\n",
+       "      <td>operating</td>\n",
+       "      <td>USA</td>\n",
+       "      <td>MD</td>\n",
+       "      <td>Baltimore</td>\n",
+       "      <td>Woodbine</td>\n",
+       "      <td>4</td>\n",
+       "      <td>2001-01-01 00:00:00</td>\n",
+       "      <td>2009-06-18 00:00:00</td>\n",
+       "      <td>2011-12-28 00:00:00</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>8</th>\n",
+       "      <td>/organization/1000-corks</td>\n",
+       "      <td>1000 Corks</td>\n",
+       "      <td>http://1000corks.com</td>\n",
+       "      <td>|Search|</td>\n",
+       "      <td>Search</td>\n",
+       "      <td>40000.0</td>\n",
+       "      <td>operating</td>\n",
+       "      <td>USA</td>\n",
+       "      <td>OR</td>\n",
+       "      <td>Portland, Oregon</td>\n",
+       "      <td>Lake Oswego</td>\n",
+       "      <td>1</td>\n",
+       "      <td>2008-01-01 00:00:00</td>\n",
+       "      <td>2011-08-23 00:00:00</td>\n",
+       "      <td>2011-08-23 00:00:00</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>9</th>\n",
+       "      <td>/organization/1000memories</td>\n",
+       "      <td>1000memories</td>\n",
+       "      <td>http://1000memories.com</td>\n",
+       "      <td>|Curated Web|</td>\n",
+       "      <td>Curated Web</td>\n",
+       "      <td>2535000.0</td>\n",
+       "      <td>acquired</td>\n",
+       "      <td>USA</td>\n",
+       "      <td>CA</td>\n",
+       "      <td>SF Bay Area</td>\n",
+       "      <td>San Francisco</td>\n",
+       "      <td>2</td>\n",
+       "      <td>2010-07-01 00:00:00</td>\n",
+       "      <td>2010-01-01 00:00:00</td>\n",
+       "      <td>2011-02-16 00:00:00</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table></div>"
+      ],
+      "text/plain": [
+       "                        permalink                name  \\\n",
+       "0           /organization/waywire            #waywire   \n",
+       "1   /organization/rock-your-paper   'Rock' Your Paper   \n",
+       "2  /organization/in-touch-network   (In)Touch Network   \n",
+       "3  /organization/r-ranch-and-mine  -R- Ranch and Mine   \n",
+       "4      /organization/club-domains       .Club Domains   \n",
+       "5       /organization/1-2-3-listo         1,2,3 Listo   \n",
+       "6   /organization/10-minutes-with     10 Minutes With   \n",
+       "7       /organization/10-20-media         10-20 Media   \n",
+       "8        /organization/1000-corks          1000 Corks   \n",
+       "9      /organization/1000memories        1000memories   \n",
+       "\n",
+       "                    homepage_url  \\\n",
+       "0         http://www.waywire.com   \n",
+       "1   http://www.rockyourpaper.org   \n",
+       "2  http://www.InTouchNetwork.com   \n",
+       "3                            NaN   \n",
+       "4               http://nic.club/   \n",
+       "5        http://www.123listo.com   \n",
+       "6       http://10minuteswith.com   \n",
+       "7      http://www.10-20media.com   \n",
+       "8           http://1000corks.com   \n",
+       "9        http://1000memories.com   \n",
+       "\n",
+       "                                       category_list         market  \\\n",
+       "0         |Entertainment|Politics|Social Media|News|          News    \n",
+       "1                             |Publishing|Education|    Publishing    \n",
+       "2  |Electronics|Guides|Coffee|Restaurants|Music|i...   Electronics    \n",
+       "3                      |Tourism|Entertainment|Games|       Tourism    \n",
+       "4                                         |Software|      Software    \n",
+       "5                                       |E-Commerce|    E-Commerce    \n",
+       "6                                        |Education|     Education    \n",
+       "7                                       |E-Commerce|    E-Commerce    \n",
+       "8                                           |Search|        Search    \n",
+       "9                                      |Curated Web|   Curated Web    \n",
+       "\n",
+       "   funding_total_usd     status country_code state_code            region  \\\n",
+       "0          1750000.0   acquired          USA         NY     New York City   \n",
+       "1            40000.0  operating          EST        NaN           Tallinn   \n",
+       "2          1500000.0  operating          GBR        NaN            London   \n",
+       "3            60000.0  operating          USA         TX            Dallas   \n",
+       "4          7000000.0        NaN          USA         FL    Ft. Lauderdale   \n",
+       "5            40000.0  operating          CHL        NaN          Santiago   \n",
+       "6          4400000.0  operating          GBR        NaN            London   \n",
+       "7          2050000.0  operating          USA         MD         Baltimore   \n",
+       "8            40000.0  operating          USA         OR  Portland, Oregon   \n",
+       "9          2535000.0   acquired          USA         CA       SF Bay Area   \n",
+       "\n",
+       "            city  funding_rounds           founded_at     first_funding_at  \\\n",
+       "0       New York               1  2012-06-01 00:00:00  2012-06-30 00:00:00   \n",
+       "1        Tallinn               1  2012-10-26 00:00:00  2012-08-09 00:00:00   \n",
+       "2         London               1  2011-04-01 00:00:00  2011-04-01 00:00:00   \n",
+       "3     Fort Worth               2  2014-01-01 00:00:00  2014-08-17 00:00:00   \n",
+       "4   Oakland Park               1  2011-10-10 00:00:00  2013-05-31 00:00:00   \n",
+       "5     Las Condes               1  2012-01-01 00:00:00  2013-02-18 00:00:00   \n",
+       "6         London               2  2013-01-01 00:00:00  2013-01-01 00:00:00   \n",
+       "7       Woodbine               4  2001-01-01 00:00:00  2009-06-18 00:00:00   \n",
+       "8    Lake Oswego               1  2008-01-01 00:00:00  2011-08-23 00:00:00   \n",
+       "9  San Francisco               2  2010-07-01 00:00:00  2010-01-01 00:00:00   \n",
+       "\n",
+       "       last_funding_at  \n",
+       "0  2012-06-30 00:00:00  \n",
+       "1  2012-08-09 00:00:00  \n",
+       "2  2011-04-01 00:00:00  \n",
+       "3  2014-09-26 00:00:00  \n",
+       "4  2013-05-31 00:00:00  \n",
+       "5  2013-02-18 00:00:00  \n",
+       "6  2014-10-09 00:00:00  \n",
+       "7  2011-12-28 00:00:00  \n",
+       "8  2011-08-23 00:00:00  \n",
+       "9  2011-02-16 00:00:00  "
+      ]
+     },
+     "execution_count": 4,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "pd.set_option('display.max_columns', None)\n",
+    "organisations.head(10)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {},
+   "outputs": [
+    {
+     "ename": "NameError",
+     "evalue": "name 'df' is not defined",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[0;31mNameError\u001b[0m                                 Traceback (most recent call last)",
+      "\u001b[0;32m/var/folders/fw/z98v802x6fx6hbz_spqj2r740000gn/T/ipykernel_58711/3086757151.py\u001b[0m in \u001b[0;36m<module>\u001b[0;34m\u001b[0m\n\u001b[0;32m----> 1\u001b[0;31m \u001b[0mdf\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mhead\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m      2\u001b[0m \u001b[0mdf\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mtail\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m      3\u001b[0m \u001b[0mdf\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mshape\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m      4\u001b[0m \u001b[0mdf\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0minfo\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m      5\u001b[0m \u001b[0mdf\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mdtypes\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;31mNameError\u001b[0m: name 'df' is not defined"
+     ]
+    }
+   ],
+   "source": [
+    "df.head()\n",
+    "df.tail()\n",
+    "df.shape\n",
+    "df.info()\n",
+    "df.dtypes\n",
+    "df.count()\n",
+    "df.describe()\n",
+    "print(investments.isnull().sum())\n",
+    "null0 = df[df[\"token0\"].isnull()]\n",
+    "organisations['status'].value_counts()\n",
+    "organisations['market'].value_counts().loc[lambda x : x>=100]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "A    11033\n",
+       "B     6344\n",
+       "C     3223\n",
+       "D     1462\n",
+       "E      576\n",
+       "F      190\n",
+       "G       38\n",
+       "H        4\n",
+       "Name: funding_round_code, dtype: int64"
+      ]
+     },
+     "execution_count": 9,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "rounds['funding_round_code'].value_counts().loc[lambda x : x>=1]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "company_permalink              0\n",
+      "company_name                   1\n",
+      "company_category_list       4446\n",
+      "company_market              4453\n",
+      "company_country_code        6566\n",
+      "company_state_code         27373\n",
+      "company_region              6566\n",
+      "company_city                7647\n",
+      "funding_round_permalink        0\n",
+      "funding_round_type             0\n",
+      "funding_round_code         61000\n",
+      "funded_at                      0\n",
+      "funded_month                  10\n",
+      " funded_quarter               10\n",
+      "funded_year                   10\n",
+      " raised_amount_usd         12831\n",
+      "Unnamed: 16                83870\n",
+      "dtype: int64\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(rounds.isnull().sum())"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "(83870, 17)"
+      ]
+     },
+     "execution_count": 5,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "rounds.shape"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Preparing investments.csv"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 19,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div><div id=1c8864ec-81e9-4c2d-86db-725aa7d10ad3 style=\"display:none; background-color:#9D6CFF; color:white; width:200px; height:30px; padding-left:5px; border-radius:4px; flex-direction:row; justify-content:space-around; align-items:center;\" onmouseover=\"this.style.backgroundColor='#BA9BF8'\" onmouseout=\"this.style.backgroundColor='#9D6CFF'\" onclick=\"window.commands?.execute('create-mitosheet-from-dataframe-output');\">See Full Dataframe in Mito</div> <script> if (window.commands.hasCommand('create-mitosheet-from-dataframe-output')) document.getElementById('1c8864ec-81e9-4c2d-86db-725aa7d10ad3').style.display = 'flex' </script> <table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>company_permalink</th>\n",
+       "      <th>company_name</th>\n",
+       "      <th>company_category_list</th>\n",
+       "      <th>company_market</th>\n",
+       "      <th>company_country_code</th>\n",
+       "      <th>company_state_code</th>\n",
+       "      <th>company_region</th>\n",
+       "      <th>company_city</th>\n",
+       "      <th>investor_permalink</th>\n",
+       "      <th>investor_name</th>\n",
+       "      <th>investor_category_list</th>\n",
+       "      <th>investor_market</th>\n",
+       "      <th>investor_country_code</th>\n",
+       "      <th>investor_state_code</th>\n",
+       "      <th>investor_region</th>\n",
+       "      <th>investor_city</th>\n",
+       "      <th>funding_round_permalink</th>\n",
+       "      <th>funding_round_type</th>\n",
+       "      <th>funding_round_code</th>\n",
+       "      <th>funded_at</th>\n",
+       "      <th>funded_month</th>\n",
+       "      <th>funded_quarter</th>\n",
+       "      <th>funded_year</th>\n",
+       "      <th>raised_amount_usd</th>\n",
+       "      <th>Invest_type</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>/organization/test-company-3</td>\n",
+       "      <td>test company</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>ARE</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>Dubai</td>\n",
+       "      <td>Dubai</td>\n",
+       "      <td>/person/jamessss-bondddd</td>\n",
+       "      <td>jamessss bondddd</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>/funding-round/c308019016ead7afb2a1d117018eb6fc</td>\n",
+       "      <td>seed</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>1921-09-01</td>\n",
+       "      <td>1921-09</td>\n",
+       "      <td>1921-Q3</td>\n",
+       "      <td>1921</td>\n",
+       "      <td>1,000</td>\n",
+       "      <td>person</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>/organization/andrewburnett-com-ltd</td>\n",
+       "      <td>AndrewBurnett.com Ltd</td>\n",
+       "      <td>|Internet|SEO|Services|Public Relations|Social Media|Consulting|</td>\n",
+       "      <td>Internet</td>\n",
+       "      <td>GBR</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>Edinburgh</td>\n",
+       "      <td>Edinburgh</td>\n",
+       "      <td>/organization/ekaf</td>\n",
+       "      <td>Ekaf</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>/funding-round/14fe2864e02d0f15ddc3ec8eacdc8e1b</td>\n",
+       "      <td>seed</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>1974-01-01</td>\n",
+       "      <td>1974-01</td>\n",
+       "      <td>1974-Q1</td>\n",
+       "      <td>1974</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>organization</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>/organization/abo-data</td>\n",
+       "      <td>ABO Data</td>\n",
+       "      <td>|Enterprise Software|</td>\n",
+       "      <td>Enterprise Software</td>\n",
+       "      <td>USA</td>\n",
+       "      <td>TX</td>\n",
+       "      <td>TX - Other</td>\n",
+       "      <td>Italy</td>\n",
+       "      <td>/person/antonio-murroni</td>\n",
+       "      <td>ANTONIO MURRONI</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>/funding-round/809e211b969c3f66440fc15ffcd29385</td>\n",
+       "      <td>seed</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>1979-01-01</td>\n",
+       "      <td>1979-01</td>\n",
+       "      <td>1979-Q1</td>\n",
+       "      <td>1979</td>\n",
+       "      <td>1,000,000</td>\n",
+       "      <td>person</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>/organization/abo-data</td>\n",
+       "      <td>ABO Data</td>\n",
+       "      <td>|Enterprise Software|</td>\n",
+       "      <td>Enterprise Software</td>\n",
+       "      <td>USA</td>\n",
+       "      <td>TX</td>\n",
+       "      <td>TX - Other</td>\n",
+       "      <td>Italy</td>\n",
+       "      <td>/person/filippo-murroni</td>\n",
+       "      <td>FILIPPO Murroni</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>/funding-round/809e211b969c3f66440fc15ffcd29385</td>\n",
+       "      <td>seed</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>1979-01-01</td>\n",
+       "      <td>1979-01</td>\n",
+       "      <td>1979-Q1</td>\n",
+       "      <td>1979</td>\n",
+       "      <td>1,000,000</td>\n",
+       "      <td>person</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>/organization/ikro</td>\n",
+       "      <td>Ikro</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>BRA</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>BRA - Other</td>\n",
+       "      <td>Canoas</td>\n",
+       "      <td>/organization/crp-companhia-de-participacoes</td>\n",
+       "      <td>CRP Companhia de Participações</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>/funding-round/46c353a8249170cc4b6ab89a522fefdc</td>\n",
+       "      <td>venture</td>\n",
+       "      <td>A</td>\n",
+       "      <td>1982-06-01</td>\n",
+       "      <td>1982-06</td>\n",
+       "      <td>1982-Q2</td>\n",
+       "      <td>1982</td>\n",
+       "      <td>724,000</td>\n",
+       "      <td>organization</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table></div>"
+      ],
+      "text/plain": [
+       "                     company_permalink           company_name  \\\n",
+       "0         /organization/test-company-3           test company   \n",
+       "1  /organization/andrewburnett-com-ltd  AndrewBurnett.com Ltd   \n",
+       "2               /organization/abo-data               ABO Data   \n",
+       "3               /organization/abo-data               ABO Data   \n",
+       "4                   /organization/ikro                   Ikro   \n",
+       "\n",
+       "                               company_category_list       company_market  \\\n",
+       "0                                                NaN                  NaN   \n",
+       "1  |Internet|SEO|Services|Public Relations|Social...             Internet   \n",
+       "2                              |Enterprise Software|  Enterprise Software   \n",
+       "3                              |Enterprise Software|  Enterprise Software   \n",
+       "4                                                NaN                  NaN   \n",
+       "\n",
+       "  company_country_code company_state_code company_region company_city  \\\n",
+       "0                  ARE                NaN          Dubai        Dubai   \n",
+       "1                  GBR                NaN      Edinburgh    Edinburgh   \n",
+       "2                  USA                 TX     TX - Other        Italy   \n",
+       "3                  USA                 TX     TX - Other        Italy   \n",
+       "4                  BRA                NaN    BRA - Other       Canoas   \n",
+       "\n",
+       "                             investor_permalink  \\\n",
+       "0                      /person/jamessss-bondddd   \n",
+       "1                            /organization/ekaf   \n",
+       "2                       /person/antonio-murroni   \n",
+       "3                       /person/filippo-murroni   \n",
+       "4  /organization/crp-companhia-de-participacoes   \n",
+       "\n",
+       "                      investor_name investor_category_list investor_market  \\\n",
+       "0                  jamessss bondddd                    NaN             NaN   \n",
+       "1                              Ekaf                    NaN             NaN   \n",
+       "2                   ANTONIO MURRONI                    NaN             NaN   \n",
+       "3                   FILIPPO Murroni                    NaN             NaN   \n",
+       "4  CRP Companhia de Participações                    NaN             NaN   \n",
+       "\n",
+       "  investor_country_code investor_state_code investor_region investor_city  \\\n",
+       "0                   NaN                 NaN             NaN           NaN   \n",
+       "1                   NaN                 NaN             NaN           NaN   \n",
+       "2                   NaN                 NaN             NaN           NaN   \n",
+       "3                   NaN                 NaN             NaN           NaN   \n",
+       "4                   NaN                 NaN             NaN           NaN   \n",
+       "\n",
+       "                           funding_round_permalink funding_round_type  \\\n",
+       "0  /funding-round/c308019016ead7afb2a1d117018eb6fc               seed   \n",
+       "1  /funding-round/14fe2864e02d0f15ddc3ec8eacdc8e1b               seed   \n",
+       "2  /funding-round/809e211b969c3f66440fc15ffcd29385               seed   \n",
+       "3  /funding-round/809e211b969c3f66440fc15ffcd29385               seed   \n",
+       "4  /funding-round/46c353a8249170cc4b6ab89a522fefdc            venture   \n",
+       "\n",
+       "  funding_round_code   funded_at funded_month funded_quarter  funded_year  \\\n",
+       "0                NaN  1921-09-01      1921-09        1921-Q3         1921   \n",
+       "1                NaN  1974-01-01      1974-01        1974-Q1         1974   \n",
+       "2                NaN  1979-01-01      1979-01        1979-Q1         1979   \n",
+       "3                NaN  1979-01-01      1979-01        1979-Q1         1979   \n",
+       "4                  A  1982-06-01      1982-06        1982-Q2         1982   \n",
+       "\n",
+       "  raised_amount_usd   Invest_type  \n",
+       "0            1,000         person  \n",
+       "1               NaN  organization  \n",
+       "2        1,000,000         person  \n",
+       "3        1,000,000         person  \n",
+       "4          724,000   organization  "
+      ]
+     },
+     "execution_count": 19,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "\n",
+    "investments.head()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 18,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Extreacting investor type from investor_permalink\n",
+    "investments[\"Invest_type\"] = investments[\"investor_permalink\"].str.split(\"/\", expand = True)[1]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "investments['Invest_type'] = np.where((investments['Invest_type'] < 0), 0, df.a)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 35,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "company_permalink\n",
+       "/organization/0-6-com                                  1\n",
+       "/organization/004-technologies                         1\n",
+       "/organization/01games-technology                       1\n",
+       "/organization/0xdata                                   7\n",
+       "/organization/1                                       13\n",
+       "                                                      ..\n",
+       "/organization/zyrra                                    2\n",
+       "/organization/zytoprotec                               1\n",
+       "/organization/zzish                                    2\n",
+       "/organization/zznode-science-and-technology-co-ltd     1\n",
+       "/organization/zzzzapp-com                              3\n",
+       "Name: Invest_type, Length: 32335, dtype: int64"
+      ]
+     },
+     "execution_count": 35,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "investments.groupby(\"company_permalink\")[\"Invest_type\"].count()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 33,
+   "metadata": {},
+   "outputs": [
+    {
+     "ename": "ValueError",
+     "evalue": "The truth value of a Series is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[0;31mValueError\u001b[0m                                Traceback (most recent call last)",
+      "\u001b[0;32m/var/folders/fw/z98v802x6fx6hbz_spqj2r740000gn/T/ipykernel_58711/4046447353.py\u001b[0m in \u001b[0;36m<module>\u001b[0;34m\u001b[0m\n\u001b[0;32m----> 1\u001b[0;31m \u001b[0mdf\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0minvestments\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mgroupby\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m\"company_permalink\"\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0;34m\"Invest_type\"\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mapply\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;32mlambda\u001b[0m \u001b[0mx\u001b[0m\u001b[0;34m:\u001b[0m \u001b[0mprint\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m\"a\"\u001b[0m\u001b[0;34m)\u001b[0m \u001b[0;32mif\u001b[0m \u001b[0;34m(\u001b[0m\u001b[0mx\u001b[0m \u001b[0;34m==\u001b[0m \u001b[0;34m\"person\"\u001b[0m\u001b[0;34m)\u001b[0m \u001b[0;32mand\u001b[0m \u001b[0;34m(\u001b[0m\u001b[0mx\u001b[0m \u001b[0;34m==\u001b[0m \u001b[0;34m\"organization\"\u001b[0m\u001b[0;34m)\u001b[0m \u001b[0;32melse\u001b[0m \u001b[0mprint\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m\"b\"\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m      2\u001b[0m \u001b[0mdf\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m~/opt/anaconda3/envs/BAPython38/lib/python3.8/site-packages/pandas/core/groupby/generic.py\u001b[0m in \u001b[0;36mapply\u001b[0;34m(self, func, *args, **kwargs)\u001b[0m\n\u001b[1;32m    221\u001b[0m     )\n\u001b[1;32m    222\u001b[0m     \u001b[0;32mdef\u001b[0m \u001b[0mapply\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mfunc\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m*\u001b[0m\u001b[0margs\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m**\u001b[0m\u001b[0mkwargs\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 223\u001b[0;31m         \u001b[0;32mreturn\u001b[0m \u001b[0msuper\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mapply\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mfunc\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m*\u001b[0m\u001b[0margs\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m**\u001b[0m\u001b[0mkwargs\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    224\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    225\u001b[0m     \u001b[0;34m@\u001b[0m\u001b[0mdoc\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0m_agg_template\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mexamples\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0m_agg_examples_doc\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mklass\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0;34m\"Series\"\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m~/opt/anaconda3/envs/BAPython38/lib/python3.8/site-packages/pandas/core/groupby/groupby.py\u001b[0m in \u001b[0;36mapply\u001b[0;34m(self, func, *args, **kwargs)\u001b[0m\n\u001b[1;32m   1273\u001b[0m         \u001b[0;32mwith\u001b[0m \u001b[0moption_context\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m\"mode.chained_assignment\"\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;32mNone\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1274\u001b[0m             \u001b[0;32mtry\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m-> 1275\u001b[0;31m                 \u001b[0mresult\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_python_apply_general\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mf\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_selected_obj\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m   1276\u001b[0m             \u001b[0;32mexcept\u001b[0m \u001b[0mTypeError\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1277\u001b[0m                 \u001b[0;31m# gh-20949\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m~/opt/anaconda3/envs/BAPython38/lib/python3.8/site-packages/pandas/core/groupby/groupby.py\u001b[0m in \u001b[0;36m_python_apply_general\u001b[0;34m(self, f, data)\u001b[0m\n\u001b[1;32m   1307\u001b[0m             \u001b[0mdata\u001b[0m \u001b[0mafter\u001b[0m \u001b[0mapplying\u001b[0m \u001b[0mf\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1308\u001b[0m         \"\"\"\n\u001b[0;32m-> 1309\u001b[0;31m         \u001b[0mkeys\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mvalues\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mmutated\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mgrouper\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mapply\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mf\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mdata\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0maxis\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m   1310\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1311\u001b[0m         return self._wrap_applied_output(\n",
+      "\u001b[0;32m~/opt/anaconda3/envs/BAPython38/lib/python3.8/site-packages/pandas/core/groupby/ops.py\u001b[0m in \u001b[0;36mapply\u001b[0;34m(self, f, data, axis)\u001b[0m\n\u001b[1;32m    850\u001b[0m             \u001b[0;31m# group might be modified\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    851\u001b[0m             \u001b[0mgroup_axes\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mgroup\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0maxes\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 852\u001b[0;31m             \u001b[0mres\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mf\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mgroup\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    853\u001b[0m             \u001b[0;32mif\u001b[0m \u001b[0;32mnot\u001b[0m \u001b[0m_is_indexed_like\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mres\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mgroup_axes\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0maxis\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    854\u001b[0m                 \u001b[0mmutated\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0;32mTrue\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m/var/folders/fw/z98v802x6fx6hbz_spqj2r740000gn/T/ipykernel_58711/4046447353.py\u001b[0m in \u001b[0;36m<lambda>\u001b[0;34m(x)\u001b[0m\n\u001b[0;32m----> 1\u001b[0;31m \u001b[0mdf\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0minvestments\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mgroupby\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m\"company_permalink\"\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0;34m\"Invest_type\"\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mapply\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;32mlambda\u001b[0m \u001b[0mx\u001b[0m\u001b[0;34m:\u001b[0m \u001b[0mprint\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m\"a\"\u001b[0m\u001b[0;34m)\u001b[0m \u001b[0;32mif\u001b[0m \u001b[0;34m(\u001b[0m\u001b[0mx\u001b[0m \u001b[0;34m==\u001b[0m \u001b[0;34m\"person\"\u001b[0m\u001b[0;34m)\u001b[0m \u001b[0;32mand\u001b[0m \u001b[0;34m(\u001b[0m\u001b[0mx\u001b[0m \u001b[0;34m==\u001b[0m \u001b[0;34m\"organization\"\u001b[0m\u001b[0;34m)\u001b[0m \u001b[0;32melse\u001b[0m \u001b[0mprint\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m\"b\"\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m      2\u001b[0m \u001b[0mdf\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m~/opt/anaconda3/envs/BAPython38/lib/python3.8/site-packages/pandas/core/generic.py\u001b[0m in \u001b[0;36m__nonzero__\u001b[0;34m(self)\u001b[0m\n\u001b[1;32m   1535\u001b[0m     \u001b[0;34m@\u001b[0m\u001b[0mfinal\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1536\u001b[0m     \u001b[0;32mdef\u001b[0m \u001b[0m__nonzero__\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m-> 1537\u001b[0;31m         raise ValueError(\n\u001b[0m\u001b[1;32m   1538\u001b[0m             \u001b[0;34mf\"The truth value of a {type(self).__name__} is ambiguous. \"\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1539\u001b[0m             \u001b[0;34m\"Use a.empty, a.bool(), a.item(), a.any() or a.all().\"\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;31mValueError\u001b[0m: The truth value of a Series is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all()."
+     ]
+    }
+   ],
+   "source": [
+    "df = investments.groupby(\"company_permalink\")[\"Invest_type\"].apply(lambda x: print(\"a\") if (x == \"person\") and (x == \"organization\") else print(\"b\"))\n",
+    "df"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "file.groupby('data__id')['data__answered_at'].apply(lambda x: x['data__answered_at'] == x['data__answered_at'].max())\n",
+    "lambda x : True if (x > 10 and x < 20) else False"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Lux lackages experiment"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 38,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "df = pd.read_csv(\"https://raw.githubusercontent.com/lux-org/lux-datasets/master/data/college.csv\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 50,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "                                             Name PredominantDegree  \\\n",
+      "0                        Alabama A & M University        Bachelor's   \n",
+      "1             University of Alabama at Birmingham        Bachelor's   \n",
+      "2             University of Alabama in Huntsville        Bachelor's   \n",
+      "3                        Alabama State University        Bachelor's   \n",
+      "4                       The University of Alabama        Bachelor's   \n",
+      "...                                           ...               ...   \n",
+      "1289        University of Connecticut-Avery Point        Bachelor's   \n",
+      "1290           University of Connecticut-Stamford        Bachelor's   \n",
+      "1291  California State University-Channel Islands        Bachelor's   \n",
+      "1292              DigiPen Institute of Technology        Bachelor's   \n",
+      "1293                           Neumont University        Bachelor's   \n",
+      "\n",
+      "     HighestDegree        FundingModel           Region        Geography  \\\n",
+      "0         Graduate              Public        Southeast    Mid-size City   \n",
+      "1         Graduate              Public        Southeast    Mid-size City   \n",
+      "2         Graduate              Public        Southeast    Mid-size City   \n",
+      "3         Graduate              Public        Southeast    Mid-size City   \n",
+      "4         Graduate              Public        Southeast       Small City   \n",
+      "...            ...                 ...              ...              ...   \n",
+      "1289      Graduate              Public      New England  Mid-size Suburb   \n",
+      "1290      Graduate              Public      New England    Mid-size City   \n",
+      "1291      Graduate              Public         Far West  Mid-size Suburb   \n",
+      "1292      Graduate  Private For-Profit         Far West       Small City   \n",
+      "1293    Bachelor's  Private For-Profit  Rocky Mountains    Mid-size City   \n",
+      "\n",
+      "      AdmissionRate  ACTMedian  SATAverage  AverageCost  Expenditure  \\\n",
+      "0            0.8989         17         823        18888         7459   \n",
+      "1            0.8673         25        1146        19990        17208   \n",
+      "2            0.8062         26        1180        20306         9352   \n",
+      "3            0.5125         17         830        17400         7393   \n",
+      "4            0.5655         26        1171        26717         9817   \n",
+      "...             ...        ...         ...          ...          ...   \n",
+      "1289         0.5940         24        1020        12946        11730   \n",
+      "1290         0.4107         21        1017        13028         4958   \n",
+      "1291         0.6443         20         954        22570        12026   \n",
+      "1292         0.6635         28        1225        37848         5998   \n",
+      "1293         0.7997         25        1104        37379         3298   \n",
+      "\n",
+      "      AverageFacultySalary  MedianDebt  AverageAgeofEntry  MedianFamilyIncome  \\\n",
+      "0                     7079     19500.0          20.629999             29039.0   \n",
+      "1                    10170     16250.0          22.670000             34909.0   \n",
+      "2                     9341     16500.0          23.190001             39766.0   \n",
+      "3                     6557     15854.5          20.889999             24029.5   \n",
+      "4                     9605     17750.0          20.770000             58976.0   \n",
+      "...                    ...         ...                ...                 ...   \n",
+      "1289                 14803     18983.0          20.120001             86510.0   \n",
+      "1290                 14803     18983.0          20.120001             86510.0   \n",
+      "1291                  8434     12500.0          24.850000             32103.0   \n",
+      "1292                  7659     19000.0          21.209999             68233.0   \n",
+      "1293                  6991     22313.0          24.750000             39241.0   \n",
+      "\n",
+      "      MedianEarnings  \n",
+      "0              27000  \n",
+      "1              37200  \n",
+      "2              41500  \n",
+      "3              22400  \n",
+      "4              39200  \n",
+      "...              ...  \n",
+      "1289           49700  \n",
+      "1290           49700  \n",
+      "1291           35800  \n",
+      "1292           72800  \n",
+      "1293           37300  \n",
+      "\n",
+      "[1294 rows x 16 columns]\n"
+     ]
+    }
+   ],
+   "source": [
+    "df.intent = [\"Region\",\"MedianEarnings\"]\n",
+    "\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Mito experiment"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "application/vnd.jupyter.widget-view+json": {
+       "model_id": "2944328e5bfe4d9988be8ff8dfb85150",
+       "version_major": 2,
+       "version_minor": 0
+      },
+      "text/plain": [
+       "MitoWidget(analysis_data_json='{\"analysisName\": \"UUID-a951bc2d-2b4f-4888-ac41-69fbe35e55a1\", \"code\": {\"imports…"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "import mitosheet\n",
+    "mitosheet.sheet()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "organisations"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "application/vnd.jupyter.widget-view+json": {
+       "model_id": "a41a5c076a98471ab4a16e24bad35f3f",
+       "version_major": 2,
+       "version_minor": 0
+      },
+      "text/plain": [
+       "MitoWidget(analysis_data_json='{\"analysisName\": \"UUID-3e0f6854-7d0e-4747-93ce-c52da7628c91\", \"code\": {\"imports…"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "import mitosheet\n",
+    "mitosheet.sheet(organisations, view_df=True)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from mitosheet import *; register_analysis('UUID-3e0f6854-7d0e-4747-93ce-c52da7628c91')\n",
+    "    \n",
+    "# Filtered name in organisations\n",
+    "organisations = organisations[organisations['name'].str.contains('wire', na=False)]\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import plotly.express as px\n",
+    "# Construct the graph and style it. Further customize your graph by editing this code.\n",
+    "# See Plotly Documentation for help: https://plotly.com/python/plotly-express/\n",
+    "fig = px.bar(organisations, x='state_code')\n",
+    "fig.update_layout(\n",
+    "    title='state_code bar chart',\n",
+    "    barmode='group',\n",
+    "    xaxis=dict(\n",
+    "        rangeslider=dict(\n",
+    "            visible=True,\n",
+    "            thickness=.05\n",
+    "        )\n",
+    "    )\n",
+    ")\n",
+    "fig.show(renderer=\"iframe\")\n"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3 (ipykernel)",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.9.12"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 4
+}
